@@ -8,26 +8,29 @@ const pluginBabel = (options = {}) => ({
 		const { filter = /.*/, namespace = '', config = {} } = options;
 
 		const transformContents = ({ args, contents }) => {
-			const babelOptions = babel.loadOptionsSync({
-				...config,
-				filename: args.path,
-				caller: {
-					name: 'esbuild-plugin-babel',
-					supportsStaticESM: true
-				}
-			});
-			if (!babelOptions) return;
-
-			if (babelOptions.sourceMaps) {
-				const filename = path.relative(process.cwd(), args.path);
-
-				babelOptions.sourceFileName = filename;
-			}
-
 			return new Promise((resolve, reject) => {
-				babel.transform(contents, babelOptions, (error, result) => {
-					error ? reject(error) : resolve({ contents: result.code });
-				});
+				babel.loadOptions(
+					{
+						...config,
+						filename: args.path,
+						caller: {
+							name: 'esbuild-plugin-babel',
+							supportsStaticESM: true
+						}
+					},
+					(error, babelOptions) => {
+						if (!babelOptions) return resolve();
+						if (babelOptions.sourceMaps) {
+							const filename = path.relative(process.cwd(), args.path);
+
+							babelOptions.sourceFileName = filename;
+						}
+
+						babel.transform(contents, babelOptions, (error, result) => {
+							error ? reject(error) : resolve({ contents: result.code });
+						});
+					}
+				);
 			});
 		};
 
